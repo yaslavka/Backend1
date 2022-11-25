@@ -18,6 +18,7 @@ router.post('/links', UserControllers.links)
 router.post('/description', UserControllers.description)
 router.get('/', UserControllers.user)
 router.post('/avatar', UserControllers.avatar)
+router.post('/password', UserControllers.password)
 // router.options('/', UserControllers.userOptions)
 
 module.exports = router

@@ -2,37 +2,121 @@ const ApiError = require("../error/ApiError");
 const bcrypt = require("bcrypt");
 const uuid = require("uuid");
 const path = require("path");
+const fs = require("fs");
 const { User, Key, Matrix_Table, Matrix } = require("../models/models");
 const jwt = require("jsonwebtoken");
 const jwt_decode = require("jwt-decode");
+const moment = require('moment')
 
 const generateJwt = (id, email, username, first_name, last_name, referral) => {
   return jwt.sign(
-    {
-      id,
-      email: email,
-      first_name: first_name,
-      last_name: last_name,
-      referral: referral,
-      username: username,
-    },
-    process.env.SECRET_KEY,
-    { expiresIn: "24h" }
+      {
+        id,
+        email: email,
+        first_name: first_name,
+        last_name: last_name,
+        referral: referral,
+        username: username,
+      },
+      process.env.SECRET_KEY,
+      { expiresIn: "24h" }
   );
 };
+
+const podpiskaCheck = async(user, level)=>{
+  if (user.balance < 1000){
+    return next(ApiError.badRequest("Для создания ключа недостаточно средств на балансе"));
+  } else {
+    let updatePodpiska = {balance: user.balance - 1000, podpiska: user.podpiska + 1000}
+    await User.update(updatePodpiska, {where:{id:user.id}})
+  }
+  if (user.balance < 6000){
+    return next(ApiError.badRequest("Для создания ключа недостаточно средств на балансе"));
+  } else {
+    let updateKurs
+    switch (level) {
+      case 1:
+        updateKurs = {balance: user.balance - 6000, kurs1: user.kurs1 + 5000}
+        await User.update(updateKurs, {where:{id:user.id}})
+        break;
+      case 2:
+        updateKurs = {balance: user.balance - 6000, kurs2: user.kurs2 + 5000}
+        await User.update(updateKurs, {where:{id:user.id}})
+        break;
+      case 3:
+        updateKurs = {balance: user.balance - 6000, kurs3: user.kurs3 + 5000}
+        await User.update(updateKurs, {where:{id:user.id}})
+        break;
+      case 4:
+        updateKurs = {balance: user.balance - 6000, kurs4: user.kurs4 + 5000}
+        await User.update(updateKurs, {where:{id:user.id}})
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+const kursCheck = async(user, level)=>{
+  let updateKurs
+  switch (level) {
+    case 1:
+      if (user.kurs1 < 5000){
+        if (user.balance < 5000){
+          return next(ApiError.badRequest("Hедостаточно средств"));
+        } else {
+          updateKurs = {balance: user.balance - 5000, kurs1: user.kurs1 + 5000}
+          await User.update(updateKurs, {where:{id:user.id}})
+        }
+      }
+      break;
+    case 2:
+      if (user.kurs2 < 5000){
+        if (user.balance < 5000){
+          return next(ApiError.badRequest("Hедостаточно средств"));
+        } else {
+          updateKurs = {balance: user.balance - 5000, kurs2: user.kurs2 + 5000}
+          await User.update(updateKurs, {where:{id:user.id}})
+        }
+      }
+      break;
+    case 3:
+      if (user.kurs3 < 5000){
+        if (user.balance < 5000){
+          return next(ApiError.badRequest("Hедостаточно средств"));
+        } else {
+          updateKurs = {balance: user.balance - 5000, kurs3: user.kurs3 + 5000}
+          await User.update(updateKurs, {where:{id:user.id}})
+        }
+      }
+      break;
+    case 4:
+      if (user.kurs4 < 5000){
+        if (user.balance < 5000){
+          return next(ApiError.badRequest("Hедостаточно средств"));
+        } else {
+          updateKurs = {balance: user.balance - 5000, kurs1: user.kurs4 + 5000}
+          await User.update(updateKurs, {where:{id:user.id}})
+        }
+      }
+      break;
+    default:
+      break;
+  }
+}
 
 async function highCheck(level, user, idCreateUser) {
   const parent = await User.findOne({ where: { id: user.referal_id } });
   const parentSecond =
-    parent.id === parent.referal_id
-      ? parent
-      : await User.findOne({ where: { id: parent.referal_id } });
+      parent.id === parent.referal_id
+          ? parent
+          : await User.findOne({ where: { id: parent.referal_id } });
   const parentThird =
-    parentSecond.id === parentSecond.referal_id
-      ? parentSecond
-      : await User.findOne({
-          where: { id: parentSecond.referal_id },
-        });
+      parentSecond.id === parentSecond.referal_id
+          ? parentSecond
+          : await User.findOne({
+            where: { id: parentSecond.referal_id },
+          });
   let bool = false;
 
   switch (level) {
@@ -73,18 +157,18 @@ class UserController {
     } = req.body;
 
     if (
-      !email ||
-      !password ||
-      !last_name ||
-      !first_name ||
-      !phone ||
-      !referral ||
-      !username
+        !email ||
+        !password ||
+        !last_name ||
+        !first_name ||
+        !phone ||
+        !referral ||
+        !username
     ) {
       return next(ApiError.badRequest("Не все поля заполнены"));
     }
     const candidate =
-      (await User.findOne({ where: { email } || { username } })) || null;
+        (await User.findOne({ where: { email } || { username } })) || null;
     if (candidate) {
       return next(ApiError.badRequest("Такой пользователь уже существует"));
     }
@@ -105,12 +189,12 @@ class UserController {
     });
     // const basket = await Basket.create({userId: user.id})
     const access_token = generateJwt(
-      user.id,
-      user.email,
-      user.username,
-      user.first_name,
-      user.last_name,
-      user.referral
+        user.id,
+        user.email,
+        user.username,
+        user.first_name,
+        user.last_name,
+        user.referral
     );
     return res.json({ access_token });
   }
@@ -122,45 +206,18 @@ class UserController {
     const userToken = await User.findOne({
       where: { username: decodeToken.username },
     });
-    if(userToken.balance < 1){
-      return next(ApiError.badRequest("Для создание ключа продлите подписку"));
-    }
     let bool;
 
     if (!level || !password || !phone || !username) {
       return next(ApiError.badRequest("Не все поля заполнены"));
     }
     const userId = (
-      await User.findOne({ where: { username: decodeToken.username } })
+        await User.findOne({ where: { username: decodeToken.username } })
     )?.id;
-    const user = (
-      await User.findOne({ where: { username: decodeToken.username } })
-    )
-
-    if (userId !== 1){
-      switch (level) {
-        case 1:
-          if (user.kurs1 < 5000){
-            return next(ApiError.badRequest(`Вы не можете создать ключь ${level} уровня, так как вы неприобрели курс 1` ));
-          }
-          break;
-        case 2:
-          if (user.kurs1 < 1500){
-            return next(ApiError.badRequest(`Вы не можете создать ключь ${level} уровня, так как вы неприобрели курс 2` ));
-          }
-          break;
-        case 3:
-          if (user.kurs1 < 2000){
-            return next(ApiError.badRequest(`Вы не можете создать ключь ${level} уровня, так как вы неприобрели курс 3` ));
-          }
-          break;
-        case 4:
-          if (user.kurs1 < 2500){
-            return next(ApiError.badRequest(`Вы не можете создать ключь ${level} уровня, так как вы неприобрели курс 4` ));
-          }
-          break;
-      }
+    if(userToken.podpiska < 1000){
+      await podpiskaCheck(userToken, level)
     }
+    await kursCheck(userToken, level)
 
     const userKey = await User.findOne({ where: { username } });
     if (!userKey) {
@@ -175,9 +232,9 @@ class UserController {
       await highCheck(level, userKey, userId).then((data) => (bool = data));
       if (!bool) {
         return next(
-          ApiError.badRequest(
-            `Вы не можете создать ключь ${level} уровня для этого пользователя`
-          )
+            ApiError.badRequest(
+                `Вы не можете создать ключь ${level} уровня для этого пользователя`
+            )
         );
       }
       const candidate = await Matrix_Table.findAll({
@@ -186,21 +243,20 @@ class UserController {
       const countCandidate = candidate.length;
       if (countCandidate === 0) {
         return next(
-          ApiError.badRequest(`Вы не можете создать ключь ${level} уровня`)
+            ApiError.badRequest(`Вы не можете создать ключь ${level} уровня`)
         );
       }
 
       const keyDublicate = await Key.findOne({ where: { userId, level } });
-      console.log(keyDublicate);
       if (keyDublicate) {
         return next(
-          ApiError.badRequest(
-            `Вы уже создали ключь ${level} уровня для этого пользователя`
-          )
+            ApiError.badRequest(
+                `Вы уже создали ключь ${level} уровня для этого пользователя`
+            )
         );
       }
       const countKeys = (
-        await Key.findAll({ where: { userId, level: countCandidate } })
+          await Key.findAll({ where: { userId, level: countCandidate } })
       ).length;
       if (countKeys < 4 && level <= countCandidate) {
         const hashPassword = await bcrypt.hash(password, 5);
@@ -243,38 +299,18 @@ class UserController {
     if (!user) {
       return next(ApiError.badRequest("Такой пользователь не существует"));
     }
+
     const candidate = await Matrix_Table.findAll({
       where: { userId: userToken.id },
     });
     const level = candidate.length + 1;
-    if (userToken.id !== 1){
-      switch (level) {
-        case 1:
-          if (userToken.kurs1 < 5000){
-            return next(ApiError.badRequest(`Вы не можете активировать ключь ${level} уровня, так как вы неприобрели курс 1` ));
-          }
-          break;
-        case 2:
-          if (userToken.kurs1 < 1500){
-            return next(ApiError.badRequest(`Вы не можете активировать ключь ${level} уровня, так как вы неприобрели курс 2` ));
-          }
-          break;
-        case 3:
-          if (userToken.kurs1 < 2000){
-            return next(ApiError.badRequest(`Вы не можете активировать ключь ${level} уровня, так как вы неприобрели курс 3` ));
-          }
-          break;
-        case 4:
-          if (userToken.kurs1 < 2500){
-            return next(ApiError.badRequest(`Вы не можете активировать ключь ${level} уровня, так как вы неприобрели курс 4` ));
-          }
-          break;
-      }
-    }
     const key = await Key.findOne({
       where: { username: userToken.username, userId: user.id, level },
     });
-
+    if(userToken.podpiska < 1000){
+      await podpiskaCheck(userToken, level)
+    }
+    await kursCheck(userToken, level)
     const parentLevel = await Matrix_Table.findAll({
       where: { userId: userToken.referal_id },
     });
@@ -284,7 +320,7 @@ class UserController {
     }
     if (username !== decodeToken.username && key.phone !== userToken.phone) {
       return next(
-        ApiError.badRequest("Ключь пытается использовать другой пользователь")
+          ApiError.badRequest("Ключь пытается использовать другой пользователь")
       );
     }
     let comparePassword = bcrypt.compareSync(password, key.password);
@@ -312,9 +348,54 @@ class UserController {
     if (keyDublicate) {
       return next(ApiError.badRequest("Вы уже активировали этот ключ"));
     }
+    let updateMinus
+    let updatePlus
+    switch (level) {
+      case 1:
+        if(userToken.balance < 5000){
+          return next(ApiError.badRequest("Для активации ключа пополните баланс"));
+        }
+        updateMinus = { balance: userToken.balance - 5000 };
+        await User.update(updateMinus, {where:{id:userToken.id}})
+        updatePlus = { balance: user.balance + 5000 };
+        await User.update(updatePlus, {where:{id:user.id}})
+        break;
+      case 2:
+        if(userToken.balance < 10000){
+          return next(ApiError.badRequest("Для активации ключа пополните баланс"));
+        }
+        updateMinus = { balance: userToken.balance - 10000 };
+        await User.update(updateMinus, {where:{id:userToken.id}})
+        updatePlus = { balance: user.balance + 10000 };
+        await User.update(updatePlus, {where:{id:user.id}})
+        break;
+      case 3:
+        if(userToken.balance < 40000){
+          return next(ApiError.badRequest("Для активации ключа пополните баланс"));
+        }
+        updateMinus = { balance: userToken.balance - 40000 };
+        await User.update(updateMinus, {where:{id:userToken.id}})
+        updatePlus = { balance: user.balance + 40000 };
+        await User.update(updatePlus, {where:{id:user.id}})
+        break;
+      case 4:
+        if(userToken.balance < 640000){
+          return next(ApiError.badRequest("Для активации ключа пополните баланс"));
+        }
+        updateMinus = { balance: userToken.balance - 640000 };
+        await User.update(updateMinus, {where:{id:userToken.id}})
+        updatePlus = { balance: user.balance + 345000 };
+        await User.update(updatePlus, {where:{id:user.id}})
+        break;
+
+      default:
+        break;
+    }
 
     if (parentLevel.length >= level) {
-      const active_key = await Matrix_Table.create({can_buy: true, is_active: true,
+      const active_key = await Matrix_Table.create({
+        can_buy: true,
+        is_active: true,
         count: 1,
         userId: userToken.id,
         type_matrix_id: key.level,
@@ -402,12 +483,12 @@ class UserController {
       return next(ApiError.internal("Неверный пароль"));
     }
     const access_token = generateJwt(
-      user.id,
-      user.email,
-      user.username,
-      user.first_name,
-      user.last_name,
-      user.referral
+        user.id,
+        user.email,
+        user.username,
+        user.first_name,
+        user.last_name,
+        user.referral
     );
     const w = new Date(Date.now() + 24 * 60 * 60 * 1000);
     return res.json({ access_token, w });
@@ -425,6 +506,27 @@ class UserController {
     };
     return res.json(result);
   }
+  async password(req, res, next) {
+    try {
+      const { new_password, old_password } = req.body;
+      const { authorization } = req.headers;
+      const token = authorization.slice(7);
+      const decodeToken = jwt_decode(token);
+      const user = await User.findOne({
+        where: { username: decodeToken.username },
+      });
+      let comparePassword = bcrypt.compareSync(old_password, user.password);
+      if (!comparePassword) {
+        return next(ApiError.internal("Неверный пароль"));
+      }
+      const hashPassword = await bcrypt.hash(new_password, 5);
+      let updateFinPassword = {password: hashPassword}
+      await User.update(updateFinPassword, {where:{id:user.id}})
+      return res.json(true)
+    } catch (error) {
+      return res.json(error)
+    }
+  }
   async user(req, res, next) {
     const { authorization } = req.headers;
     const token = authorization.slice(7);
@@ -435,10 +537,10 @@ class UserController {
         return next(ApiError.internal("Такой пользователь не найден"));
       }
       let now = new Date();
-      let {activation_date, balance} = user
+      let {activation_date, podpiska} = user
       let limit = new Date(activation_date.getFullYear(), (activation_date.getMonth() + 1), activation_date.getDate())
       if (now > limit){
-        let update = {balance: balance - 1000};
+        let update = {podpiska: podpiska - 1000};
         await User.update(update, { where: { id: user.id } });
 
       }
@@ -449,21 +551,21 @@ class UserController {
       let referal;
       const parent = await User.findOne({ where: { id: user.referal_id } });
       const parentSecond =
-        parent.id === parent.referal_id
-          ? parent
-          : await User.findOne({ where: { id: parent.referal_id } });
+          parent.id === parent.referal_id
+              ? parent
+              : await User.findOne({ where: { id: parent.referal_id } });
       const parentThird =
-        parentSecond.id === parentSecond.referal_id
-          ? parentSecond
-          : await User.findOne({
-              where: { id: parentSecond.referal_id },
-            });
+          parentSecond.id === parentSecond.referal_id
+              ? parentSecond
+              : await User.findOne({
+                where: { id: parentSecond.referal_id },
+              });
       const parentFour =
-        parentThird.id === parentThird.referal_id
-          ? parentSecond
-          : await User.findOne({
-              where: { id: parentThird.referal_id },
-            });
+          parentThird.id === parentThird.referal_id
+              ? parentSecond
+              : await User.findOne({
+                where: { id: parentThird.referal_id },
+              });
       switch (matrixUser.length) {
         case 0:
           referal = parent;
@@ -485,6 +587,7 @@ class UserController {
       }
 
       user.dataValues.referal = referal;
+      user.dataValues.activation_date = moment.utc(user.dataValues.activation_date).format('DD/MM/YYYY')
       return res.json(user);
     } catch (error) {
       console.log(error);
@@ -492,7 +595,7 @@ class UserController {
     }
   }
 
-  async avatar(req, res) {
+  async avatar(req, res, next) {
     const { avatar } = req.files;
     const { authorization } = req.headers;
     const token = authorization.slice(7);

@@ -32,27 +32,20 @@ const Matrix_Table = sequelize.define(
     count: { type: DataTypes.INTEGER, allowNull: false },
     matrix_parent_id: { type: DataTypes.BIGINT, defaultValue: null },
     type_matrix_id: { type: DataTypes.BIGINT, defaultValue: null },
-  },
-  {
-    // initialAutoIncrement: 11,
   }
 );
-// const StMatrix_Table = sequelize.define("st_matrix_table", {
-//   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
-//   is_active: { type: DataTypes.BOOLEAN, allowNull: false },
-//   can_buy: { type: DataTypes.BOOLEAN, allowNull: false },
-//   count: { type: DataTypes.INTEGER, allowNull: false },
-// });
+
 const Role = sequelize.define("role", {
   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
   name: { type: DataTypes.STRING, defaultValue: null },
 });
-// const StMatrix = sequelize.define("st_matrix", {
-//   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
-//   date: { type: DataTypes.DATE, defaultValue: null },
-//   matrix_essence: { type: DataTypes.INTEGER, defaultValue: null },
-//   side_matrix: { type: DataTypes.INTEGER, defaultValue: null },
-// });
+const Winthdraw = sequelize.define("winthdraw", {
+  id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+  amount: { type: DataTypes.INTEGER, defaultValue: null },
+  system: { type: DataTypes.STRING, defaultValue: null },
+  wallet: { type: DataTypes.STRING, defaultValue: null },
+});
+
 
 const Transaction = sequelize.define("transaction", {
   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
@@ -107,12 +100,13 @@ const User = sequelize.define(
     activation_date: { type: DataTypes.DATE, defaultValue: null },
     // active_partners: { type: DataTypes.INTEGER, allowNull: false },
     avatar: { type: DataTypes.STRING, defaultValue: null },
-    balance: { type: DataTypes.INTEGER, defaultValue: 1000, allowNull: false },
+    balance: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
+    podpiska: { type: DataTypes.INTEGER, defaultValue: 1000, allowNull: false },
     kurs1: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
     kurs2: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
     kurs3: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
     kurs4: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
-    // can_create_comment: { type: DataTypes.BOOLEAN,  allowNull:false },
+    // can_create_comment: { type: DataTypes.BOOLEAN,  allowNull:false }, 
     email: { type: DataTypes.STRING, allowNull: false },
     finance_password: { type: DataTypes.STRING, defaultValue: null },
     // first_enter: { type: DataTypes.BOOLEAN,  allowNull: false },
@@ -123,7 +117,7 @@ const User = sequelize.define(
     instagram: { type: DataTypes.STRING, defaultValue: null },
     is_verified: { type: DataTypes.INTEGER, defaultValue: 0 },
     last_name: { type: DataTypes.STRING, defaultValue: null },
-    locale: { type: DataTypes.STRING, defaultValue: null },
+    locale: { type: DataTypes.INTEGER, defaultValue: null },
     password: { type: DataTypes.STRING, allowNull: false },
     phone: { type: DataTypes.STRING, allowNull: false },
     ref_link: { type: DataTypes.STRING, defaultValue: null },
@@ -160,6 +154,9 @@ Transaction.belongsTo(User);
 
 User.hasMany(Key);
 Key.belongsTo(User);
+
+User.hasMany(Winthdraw);
+Winthdraw.belongsTo(User);
 
 User.hasOne(Matrix_Table);
 Matrix_Table.belongsTo(User, { as: "user" });
@@ -234,7 +231,7 @@ module.exports = {
   // StMatrix,
   Transaction,
   TypeMatrix,
-  // Statistic,
+  Winthdraw,
   User,
   // StMatrix_Table,
   // StTypeMatrix
